@@ -377,7 +377,7 @@
 <div id="cursor"></div>
 <script>
 const $ = (id) => document.getElementById(id);
-const KEY = "ops-assistant-demo-v6";
+const KEY = "ops-assistant-demo-v7";
 const spot = $("spot");
 const cursor = $("cursor");
 let limits = { drill: 500000, prod: 500000 };
@@ -402,6 +402,15 @@ function load() {
     tickets = data.tickets || [];
     audit = data.audit || [];
     log = data.log || [];
+    let interrupted = false;
+    log = log.filter((m) => {
+      if (m.kind === "bot" && m.text === "正在加载页面助手…") { interrupted = true; return false; }
+      return true;
+    });
+    log.forEach((m) => {
+      if ((m.kind === "card" || m.kind === "steps") && !m.done) { m.done = true; interrupted = true; }
+    });
+    if (interrupted) log.push({ kind: "bot", text: "页面刷新后，上一次页面助手已经中断。允许和跳过不会继续那一轮。请再点「页面助手试试」。" });
   } catch (_) {}
 }
 function renderLimits() {
