@@ -52,16 +52,16 @@ python server.py
 在仓库根目录执行。`.env` 只放在服务器上。
 
 ```bash
-sudo useradd --system --home /opt/webaide --shell /usr/sbin/nologin desk
-sudo mkdir -p /opt/webaide
-sudo cp server.py index.html /opt/webaide/
-sudo cp -r kb /opt/webaide/
-sudo cp .env.example /opt/webaide/.env
-sudoedit /opt/webaide/.env
-sudo chown -R desk:desk /opt/webaide
-sudo cp deploy/webaide.service /etc/systemd/system/
+sudo useradd --system --home /opt/web-ai-assistant --shell /usr/sbin/nologin desk
+sudo mkdir -p /opt/web-ai-assistant
+sudo cp server.py index.html /opt/web-ai-assistant/
+sudo cp -r kb /opt/web-ai-assistant/
+sudo cp .env.example /opt/web-ai-assistant/.env
+sudoedit /opt/web-ai-assistant/.env
+sudo chown -R desk:desk /opt/web-ai-assistant
+sudo cp deploy/web-ai-assistant.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now webaide
+sudo systemctl enable --now web-ai-assistant
 ```
 
 要让别人从浏览器打开，把 `.env` 里的 `HOST` 改成 `0.0.0.0`，并用安全组或防火墙只放行需要的来源地址。默认只监听本机。
