@@ -291,6 +291,12 @@
         </tbody>
       </table>
     </div>
+    <div class="panel" id="card-note" style="margin-top:12px">
+      <div class="panel-bar"><span>值班备注</span><span>这是后加的字段，旧助手没有对应工具</span></div>
+      <div style="padding:12px">
+        <label>给下一班<input id="site-note" type="text" placeholder="例如：夜班注意，测试限额不要同步生产" style="min-width:280px" /></label>
+      </div>
+    </div>
   </section>
   <section id="view-ticket" hidden>
     <div class="crumb">柜面参数 / 对公结算 / 变更单</div>
@@ -748,7 +754,7 @@ $("chip-script-ok").onclick = () => playScriptOk();
 $("chip-script-no").onclick = () => playScriptDeny();
 $("chip-port").onclick = () => askModel("把测试环境的单笔对公转账限额改成 20 万。改之前先在页面上问我。");
 $("chip-ticket").onclick = () => askModel("把刚才的限额调整补成变更单，填好标题和描述，不要自己提交。");
-$("chip-page-agent").onclick = () => runPageAgent(($("ask-input").value.trim()) || "把测试环境的单笔对公转账限额改成 15 万。不要改生产限额，不要导出客户清单。");
+$("chip-page-agent").onclick = () => runPageAgent(($("ask-input").value.trim()) || "在「值班备注」输入框里写上：夜班注意，测试限额不要同步生产。不要改限额，不要提交工单，不要导出。");
 $("ask").onsubmit = (e) => {
   e.preventDefault();
   const text = $("ask-input").value.trim();
@@ -819,7 +825,7 @@ async function runPageAgent(text) {
   busy = false;
 }
 if (!log.length) {
-  push({ kind: "bot", text: "我在这个网页里面操作，不从浏览器外面点。柜面主管改测试限额时，会先框出字段，等你点允许。生产限额和客户清单，允许了也不够。上面两个演示不走模型，适合限时演示。" });
+  push({ kind: "bot", text: "上面两个演示不走模型。「让助手改限额」只会改限额和工单。「页面助手试试」用 page-agent，能点页面上后加的值班备注。每一步都要你点允许。" });
 } else renderLog();
 </script>
 </body>
