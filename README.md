@@ -52,16 +52,16 @@ python server.py
 在仓库根目录执行。`.env` 只放在服务器上。
 
 ```bash
-sudo useradd --system --home /opt/branch-param-desk --shell /usr/sbin/nologin desk
-sudo mkdir -p /opt/branch-param-desk
-sudo cp server.py index.html /opt/branch-param-desk/
-sudo cp -r kb /opt/branch-param-desk/
-sudo cp .env.example /opt/branch-param-desk/.env
-sudoedit /opt/branch-param-desk/.env
-sudo chown -R desk:desk /opt/branch-param-desk
-sudo cp deploy/branch-param-desk.service /etc/systemd/system/
+sudo useradd --system --home /opt/inpage-allow --shell /usr/sbin/nologin desk
+sudo mkdir -p /opt/inpage-allow
+sudo cp server.py index.html /opt/inpage-allow/
+sudo cp -r kb /opt/inpage-allow/
+sudo cp .env.example /opt/inpage-allow/.env
+sudoedit /opt/inpage-allow/.env
+sudo chown -R desk:desk /opt/inpage-allow
+sudo cp deploy/inpage-allow.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now branch-param-desk
+sudo systemctl enable --now inpage-allow
 ```
 
 要让别人从浏览器打开，把 `.env` 里的 `HOST` 改成 `0.0.0.0`，并用安全组或防火墙只放行需要的来源地址。默认只监听本机。

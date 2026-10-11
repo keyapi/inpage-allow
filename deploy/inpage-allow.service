@@ -1,11 +1,11 @@
 [Unit]
-Description=Branch parameter desk demo
+Description=In-page allow assistant demo
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/branch-param-desk
-EnvironmentFile=/opt/branch-param-desk/.env
+WorkingDirectory=/opt/inpage-allow
+EnvironmentFile=/opt/inpage-allow/.env
 ExecStart=/usr/bin/python3 server.py
 Restart=on-failure
 User=desk
