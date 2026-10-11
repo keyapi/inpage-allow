@@ -52,16 +52,16 @@ python server.py
 在仓库根目录执行。`.env` 只放在服务器上。
 
 ```bash
-sudo useradd --system --home /opt/inpage-allow --shell /usr/sbin/nologin desk
-sudo mkdir -p /opt/inpage-allow
-sudo cp server.py index.html /opt/inpage-allow/
-sudo cp -r kb /opt/inpage-allow/
-sudo cp .env.example /opt/inpage-allow/.env
-sudoedit /opt/inpage-allow/.env
-sudo chown -R desk:desk /opt/inpage-allow
-sudo cp deploy/inpage-allow.service /etc/systemd/system/
+sudo useradd --system --home /opt/webaide --shell /usr/sbin/nologin desk
+sudo mkdir -p /opt/webaide
+sudo cp server.py index.html /opt/webaide/
+sudo cp -r kb /opt/webaide/
+sudo cp .env.example /opt/webaide/.env
+sudoedit /opt/webaide/.env
+sudo chown -R desk:desk /opt/webaide
+sudo cp deploy/webaide.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now inpage-allow
+sudo systemctl enable --now webaide
 ```
 
 要让别人从浏览器打开，把 `.env` 里的 `HOST` 改成 `0.0.0.0`，并用安全组或防火墙只放行需要的来源地址。默认只监听本机。
