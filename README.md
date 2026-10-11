@@ -45,6 +45,8 @@ python server.py
 
 涉及改数、导出或越权时，对话里会出现「安全护栏」：岗位白名单、生产写保护、客户信息不出域、无差额不立项、人工确认。
 
+为什么要先查再改、护栏为什么不看整句话，见 [docs/read-then-guard.md](docs/read-then-guard.md)。
+
 ## 部署到一台 Linux
 
 在仓库根目录执行。`.env` 只放在服务器上。

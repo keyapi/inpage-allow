@@ -12,11 +12,12 @@ tags: [demo, guardrails, agent]
 
 ## 新对话必读
 
+- [先查再决定，护栏看动作](docs/read-then-guard.md)
 - [给人看的运行说明](README.md)
 
 ## 运行
 
-`python server.py`，默认 `127.0.0.1:8765`。密钥从本目录 `.env`，其次才是仓库里已有的 Open WebUI `.env`。不要把 Key 写进页面或文档。
+`python server.py`，默认 `127.0.0.1:8765`。密钥只从本目录 `.env` 读取。不要把 Key 写进页面或文档。
 
 ## 不要再做的事
 
