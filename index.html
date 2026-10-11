@@ -169,6 +169,8 @@
   .toast { color: var(--ok); }
   .empty { color: var(--muted); text-align: center; }
   aside {
+    position: relative;
+    z-index: 2147483646;
     background: #fff;
     border-left: 1px solid var(--line);
     display: flex;
@@ -799,9 +801,11 @@ async function runPageAgent(text) {
   if (busy) return;
   busy = true;
   push({ kind: "user", text });
-  push({ kind: "bot", text: "正在加载页面助手…" });
+  const pending = push({ kind: "bot", text: "正在加载页面助手…" });
   try {
     await loadPageAgentLib();
+    log.splice(pending, 1);
+    renderLog();
     const agent = new window.PageAgent({
       baseURL: location.origin + "/v1",
       model: "deepseek-v4-flash",
