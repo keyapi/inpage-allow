@@ -285,9 +285,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/kb":
             self._send(200, {"text": KB}, "application/json; charset=utf-8")
             return
-        rel = "index.html" if path in ("/", "") else path.lstrip("/")
-        file = (ROOT / rel).resolve()
-        if not str(file).startswith(str(ROOT)) or not file.is_file():
+        allowed = {"/": "index.html", "/index.html": "index.html"}
+        rel = allowed.get(path)
+        file = ROOT / rel if rel else None
+        if file is None or not file.is_file():
             self._send(404, {"error": "not found"}, "application/json; charset=utf-8")
             return
         kind = "text/html; charset=utf-8" if file.suffix == ".html" else "application/json; charset=utf-8"
@@ -295,6 +296,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
+        if path == "/api/chat":
+            self._send(503, {"error": "模型入口暂时关闭，等待后台认证与调用预算接入。"}, "application/json; charset=utf-8")
+            return
+        if path == "/api/change":
+            self._send(403, {"error": "旧写入入口已关闭，等待后台授权接入。"}, "application/json; charset=utf-8")
+            return
         length = int(self.headers.get("Content-Length", "0"))
         try:
             body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
@@ -302,7 +309,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(400, {"error": "bad json"}, "application/json; charset=utf-8")
             return
         if path == "/v1/chat/completions":
-            self._proxy_llm(body)
+            self._send(404, {"error": "not found"}, "application/json; charset=utf-8")
             return
         if path == "/api/change":
             result = apply_change(
