@@ -7,7 +7,7 @@ title: 受控办理助手交接
 
 先读 [本次交接与续办清单](docs/handoff-2026-10-12.md)、[规格](docs/competition-plan.md)、[边界](docs/security-boundaries.md)、[剧本](docs/demo-script.md)、[静态配置暴露经验](docs/solutions/static-config-exposure.md)。独立竞赛仓库不读取公司环境凭证，不连接真实银行系统。
 
-目标：`server.py` 负责 HTTP 会话、同源检查、请求标记、静态白名单、调用限制和模型循环。当前这些新HTTP能力尚未实现，只已部署安全封堵。`domain.py` 已实现模拟资料、配置、提案、权限、SQLite 事务和审计，但尚未接入HTTP。新界面是未联调草稿。运行使用 `uv run python server.py`，验证使用 `uv run python -m unittest discover -s tests -v`。
+目标：柜面页保留，左侧增加联调配置、知识依据、安全实测、演示说明。`server.py` 保留限额聊天，并用 `/api/ops/*` 把 `domain.py` 接上。静态白名单和公开 `/v1` 仍然关闭。本机 `http://127.0.0.1:8766/` 与腾讯云 `http://111.231.80.156:8765/` 已是这一版。运行使用 `python server.py`。
 
 ## 保留的设计
 

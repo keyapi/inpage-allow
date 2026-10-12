@@ -49,11 +49,12 @@ class StaticSecurityTests(unittest.TestCase):
     def test_public_generic_model_proxy_is_removed(self):
         self.assertEqual(self.status('/v1/chat/completions', b'{}'), 404)
 
-    def test_legacy_unauthenticated_chat_and_write_are_disabled(self):
+    def test_demo_chat_and_change_stay_available(self):
+        # 静态文件和公开 /v1 继续关闭。演示页自己的聊天和测试环境写入要能用。
         with patch.object(server.Handler, '_chat', lambda handler, body: handler._send(
                 200, {'fixture': 'legacy model reached'}, 'application/json')):
-            self.assertEqual(self.status('/api/chat', b'{}'), 503)
-        self.assertEqual(self.status('/api/change', b'{"env":"drill","text":"fixture"}'), 403)
+            self.assertEqual(self.status('/api/chat', b'{}'), 200)
+        self.assertEqual(self.status('/api/change', b'{"env":"drill","text":"fixture"}'), 200)
 
 
 if __name__ == '__main__':
