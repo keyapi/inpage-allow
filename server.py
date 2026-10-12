@@ -285,9 +285,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/kb":
             self._send(200, {"text": KB}, "application/json; charset=utf-8")
             return
-        rel = "index.html" if path in ("/", "") else path.lstrip("/")
-        file = (ROOT / rel).resolve()
-        if not str(file).startswith(str(ROOT)) or not file.is_file():
+        allowed = {"/": "index.html", "/index.html": "index.html"}
+        rel = allowed.get(path)
+        file = ROOT / rel if rel else None
+        if file is None or not file.is_file():
             self._send(404, {"error": "not found"}, "application/json; charset=utf-8")
             return
         kind = "text/html; charset=utf-8" if file.suffix == ".html" else "application/json; charset=utf-8"
@@ -302,7 +303,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(400, {"error": "bad json"}, "application/json; charset=utf-8")
             return
         if path == "/v1/chat/completions":
-            self._proxy_llm(body)
+            self._send(404, {"error": "not found"}, "application/json; charset=utf-8")
             return
         if path == "/api/change":
             result = apply_change(
