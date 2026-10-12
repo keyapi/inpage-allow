@@ -11,8 +11,9 @@ title: Web AI assistant — 文档索引
 |---|---|---|
 | Reference | 受控办理助手交接 | [AGENT_HANDOFF.md](AGENT_HANDOFF.md) |
 | Spec | 竞赛实施与验收规格 | [docs/competition-plan.md](docs/competition-plan.md) |
+| Reference | Cursor 续办代码审计与复核清单 | [docs/cursor-audit-2026-10-12.md](docs/cursor-audit-2026-10-12.md) |
 | Reference | 五分钟演示与答疑备用剧本 | [docs/demo-script.md](docs/demo-script.md) |
-| Reference | 2026-10-12 实现交接与部署禁令 | [docs/handoff-2026-10-12.md](docs/handoff-2026-10-12.md) |
+| Reference | 2026-10-12 实现与验证交接 | [docs/handoff-2026-10-12.md](docs/handoff-2026-10-12.md) |
 | Index | 文档索引 | [docs/index.md](docs/index.md) |
 | Log | 文档变更日志 | [docs/log.md](docs/log.md) |
 | Reference | 网页内参数助手先查再决定，护栏看动作不看原话 | [docs/read-then-guard.md](docs/read-then-guard.md) |

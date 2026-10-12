@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 import sqlite3
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
@@ -143,6 +144,88 @@ class DomainTests(unittest.TestCase):
         self.store.execute('one', 'operator', later['id'], later['digest'])
         self.assertCode('STALE', lambda: self.store.rollback('one', 'operator', p['id']))
         self.assertEqual(self.config()['values']['timeout'], 45)
+
+    def test_denial_audit_cannot_overwrite_another_store_commit(self):
+        p = self.propose()
+        peer = Store(self.store.path)
+        started, finished = threading.Event(), threading.Event()
+        original_record = self.store._record
+        futures = []
+        def peer_change():
+            started.set()
+            newer = peer.propose('one', 'operator', 'integration',
+                                 [{'field': 'timeout', 'value': 45}], 'another session', False)
+            peer.execute('one', 'operator', newer['id'], newer['digest'])
+            finished.set()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            def record(*args, **kwargs):
+                if len(args) > 3 and args[3] == 'denied':
+                    futures.append(pool.submit(peer_change))
+                    self.assertTrue(started.wait(1))
+                    # Allow the peer to commit if denial processing released the
+                    # SQLite lock. Correct code keeps it until audit commit.
+                    finished.wait(0.25)
+                return original_record(*args, **kwargs)
+            try:
+                with patch.object(self.store, '_record', side_effect=record):
+                    self.assertCode('DIGEST_MISMATCH', lambda: self.store.execute('one', 'operator', p['id'], 'tampered'))
+                for future in futures:
+                    future.result(timeout=6)
+                self.assertEqual(self.config()['values']['timeout'], 45)
+                history = self.store.audit('one', 'operator')
+                self.assertTrue(any(a['outcome'] == 'denied' for a in history))
+                self.assertTrue(any(a['outcome'] == 'success' for a in history))
+            finally:
+                peer.db.close()
+
+    def test_counter_rejects_fractional_and_boolean_amounts(self):
+        for value in (150000.5, True, False, 10 ** 400):
+            with self.subTest(value=value):
+                self.assertCode('INVALID_CHANGE', lambda: self.store.propose('one', 'operator', 'counter',
+                               [{'field': 'limit', 'value': value}], 'explicit amount'))
+
+    def test_review_requires_boolean_and_retains_pending_ticket(self):
+        p = self.propose()
+        self.store.execute('one', 'operator', p['id'], p['digest'])
+        ticket = self.store.snapshot('one', 'reviewer')['tickets'][0]
+        for value in ('false', 1, None):
+            self.assertCode('INVALID_CHANGE', lambda: self.store.review('one', 'reviewer', ticket['id'], value))
+        self.assertEqual(self.store.snapshot('one', 'reviewer')['tickets'][0]['status'], 'pending_review')
+
+    def test_noop_audit_is_queryable_and_does_not_change_version(self):
+        p = self.store.propose('one', 'operator', 'counter', [{'field': 'limit', 'value': 500000}], 'same amount')
+        self.store.execute('one', 'operator', p['id'], p['digest'])
+        self.assertEqual(self.config(scenario='counter')['version'], 1)
+        record = next(a for a in self.store.audit('one', 'operator') if a['outcome'] == 'no_change')
+        self.assertEqual(record['before'], record['after'])
+        self.assertEqual(record['proposal_id'], p['id'])
+        self.assertEqual(self.store.audit('other', 'operator'), [])
+        self.assertEqual(self.store.audit('one', 'reader'), [])
+
+    def test_injection_case_describes_executor_boundary_not_detection(self):
+        result = self.store.safety_test('one', 'operator', 'injection')
+        self.assertIn('不宣称检测全部提示注入', result['detail'])
+        self.assertEqual(result['document']['status'], 'fixture')
+
+    def test_record_denial_preserves_configs_and_exposes_structured_audit(self):
+        before = self.store.snapshot('one', 'operator')['configs']
+        result = self.store.record_denial('one', 'operator', 'request_production_write',
+                                         'PRODUCTION_FORBIDDEN', '生产写入能力未开放')
+        self.assertTrue(result['ok'])
+        self.assertEqual(self.store.snapshot('one', 'operator')['configs'], before)
+        record = self.store.audit('one', 'operator')[-1]
+        self.assertEqual(record['action'], 'request_production_write')
+        self.assertEqual(record['outcome'], 'denied')
+        self.assertEqual(record['code'], 'PRODUCTION_FORBIDDEN')
+        self.assertEqual(record['detail'], '生产写入能力未开放')
+
+    def test_reader_denial_is_recorded_without_exposing_audit(self):
+        self.store.record_denial('one', 'reader', 'export_customers', 'EXPORT_FORBIDDEN', '未开放导出能力')
+        self.assertEqual(self.store.snapshot('one', 'reader')['audit'], [])
+        record = self.store.audit('one', 'operator')[-1]
+        self.assertEqual(record['actor'], 'reader')
+        self.assertEqual(record['code'], 'EXPORT_FORBIDDEN')
+        self.assertEqual(self.store.audit('other', 'operator'), [])
 
 
 if __name__ == '__main__':

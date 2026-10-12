@@ -11,7 +11,6 @@ from unittest.mock import patch
 import server
 
 
-@unittest.skipUnless(hasattr(server, 'STORE'), '待续：HTTP会话和领域接口尚未接入；这是下一轮验收用例')
 class HttpTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -26,6 +25,9 @@ class HttpTests(unittest.TestCase):
     def tearDown(self):
         self.http.shutdown()
         self.http.server_close()
+        self.thread.join(timeout=5)
+        # Windows 会锁住仍打开的 SQLite 文件；先关连接再删临时目录。
+        server.STORE.db.close()
         self.dbpatch.stop()
         self.temp.cleanup()
 
@@ -54,6 +56,23 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.request('/api/login', {'username': 'operator', 'password': 'wrong'})[0], 401)
         self.assertEqual(self.request('/api/login', {}, header=False)[0], 403)
         self.assertEqual(self.request('/api/login', {}, origin='https://attacker.invalid')[0], 403)
+
+    def test_forged_role_header_never_authenticates(self):
+        req = urllib.request.Request(self.base + '/api/ops/state', headers={'X-Ops-Role': 'operator'})
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            self.opener.open(req)
+        self.assertEqual(raised.exception.code, 401)
+
+    def test_separate_browsers_have_separate_workspaces(self):
+        first = self.login()
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        second = self.login()
+        self.assertNotEqual(first['workspace'], second['workspace'])
+
+    def test_request_body_is_an_object_and_size_is_bounded(self):
+        self.login()
+        self.assertEqual(self.request('/api/propose', [1])[0], 400)
+        self.assertEqual(self.request('/api/propose', {'reason': 'x' * 40000})[0], 413)
 
     def test_client_role_cannot_bypass_backend(self):
         self.login('reader')
@@ -102,12 +121,65 @@ class HttpTests(unittest.TestCase):
                      msg([('search_knowledge', {'query': 'integration'}), ('read_configuration', {})]),
                      msg([('propose_change', {'changes': [{'field': 'timeout', 'value': 60}], 'reason': 'fixture', 'submit': True})])]
         with patch.object(server, 'model_call', side_effect=responses), patch.dict(server.CONFIG, {'OPENAI_API_KEY': 'fixture-only', 'OPENAI_API_BASE_URL': 'https://example.invalid/v1'}):
-            status, data = self.request('/api/chat', {'scenario': 'integration', 'text': 'change timeout to sixty seconds'})
+            status, data = self.request('/api/chat', {'scenario': 'integration', 'text': 'change timeout to 60 seconds'})
         self.assertEqual(status, 200, data)
         self.assertEqual(data['source'], 'live-model')
         self.assertTrue(data['citations'])
         self.assertTrue(data['proposal'])
         self.assertTrue(any('先' in str(t) for t in data['trace']))
+
+    def test_invented_targets_rejected_and_decimal_yuan_supported(self):
+        with self.assertRaises(server.DomainError):
+            server.validate_explicit_targets('请调到合理水平', 'counter', [{'field': 'limit', 'value': 200000}])
+        server.validate_explicit_targets('改成1.5万元', 'counter', [{'field': 'limit', 'value': 15000}])
+        with self.assertRaises(server.DomainError):
+            server.validate_explicit_targets('改成1.5万元', 'counter', [{'field': 'limit', 'value': 50000}])
+
+    def test_noop_model_does_not_create_pending_proposal_or_ticket(self):
+        self.login()
+        def msg(calls):
+            return {'choices': [{'message': {'tool_calls': [
+                {'id': str(i), 'type': 'function', 'function': {'name': n, 'arguments': json.dumps(a)}}
+                for i, (n, a) in enumerate(calls)]}}]}
+        responses = [msg([('search_knowledge', {'query': 'limit'}), ('read_configuration', {})]),
+                     msg([('propose_change', {'changes': [{'field': 'limit', 'value': 500000}], 'reason': 'fixture', 'submit': True})])]
+        with patch.object(server, 'model_call', side_effect=responses), patch.dict(server.CONFIG, {'OPENAI_API_KEY': 'fixture-only', 'OPENAI_API_BASE_URL': 'https://example.invalid/v1'}):
+            status, data = self.request('/api/chat', {'scenario': 'counter', 'text': '改成500000元并提交申请'})
+        self.assertEqual(status, 200, data)
+        self.assertTrue(data['noop'])
+        self.assertIsNone(data['proposal'])
+        self.assertEqual(data['state']['tickets'], [])
+        self.assertEqual(data['state']['proposals'], [])
+
+    def test_call_budget_fails_closed(self):
+        budget = 'fixture-budget-' + self.temp.name
+        server.rate_limit(budget, 1, 3600)
+        with self.assertRaises(server.DomainError) as raised:
+            server.rate_limit(budget, 1, 3600)
+        self.assertEqual(raised.exception.status, 429)
+
+    def test_model_concurrency_rejects_without_calling_upstream(self):
+        self.login()
+        server.MODEL_SLOTS.acquire()
+        server.MODEL_SLOTS.acquire()
+        try:
+            with patch.object(server, 'model_call') as upstream:
+                status, data = self.request('/api/chat', {'scenario': 'integration', 'text': '超时改成60秒'})
+                self.assertEqual(status, 429, data)
+                upstream.assert_not_called()
+        finally:
+            server.MODEL_SLOTS.release()
+            server.MODEL_SLOTS.release()
+
+    def test_role_switch_revokes_previous_cookie(self):
+        self.login()
+        old_cookie = next(handler.cookiejar for handler in self.opener.handlers if hasattr(handler, 'cookiejar'))
+        token = next(iter(old_cookie)).value
+        self.login('reader')
+        req = urllib.request.Request(self.base + '/api/state', headers={'Cookie': 'demo_session=' + token})
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            urllib.request.urlopen(req)
+        self.assertEqual(raised.exception.code, 401)
 
 
 if __name__ == '__main__':
