@@ -10,6 +10,7 @@ title: Web AI assistant — 文档索引
 | 类型 | 文档 | 文件 |
 |---|---|---|
 | Reference | 受控办理助手交接 | [AGENT_HANDOFF.md](AGENT_HANDOFF.md) |
+| Reference | 渠道接入三页面实现与实际验收 | [docs/bank-operations.md](docs/bank-operations.md) |
 | Spec | 竞赛实施与验收规格 | [docs/competition-plan.md](docs/competition-plan.md) |
 | Reference | Cursor 续办代码审计与复核清单 | [docs/cursor-audit-2026-10-12.md](docs/cursor-audit-2026-10-12.md) |
 | Reference | 五分钟演示与答疑备用剧本 | [docs/demo-script.md](docs/demo-script.md) |
