@@ -296,6 +296,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
+        if path == "/api/chat":
+            self._send(503, {"error": "模型入口暂时关闭，等待后台认证与调用预算接入。"}, "application/json; charset=utf-8")
+            return
+        if path == "/api/change":
+            self._send(403, {"error": "旧写入入口已关闭，等待后台授权接入。"}, "application/json; charset=utf-8")
+            return
         length = int(self.headers.get("Content-Length", "0"))
         try:
             body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
