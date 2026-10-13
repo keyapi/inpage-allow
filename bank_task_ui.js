@@ -39,10 +39,10 @@
     el('bank-task-preview').onclick=()=>preview();el('bank-task-approve').onclick=()=>confirm();el('bank-task-cancel').onclick=()=>cancel();
     loadCatalog();render();
   }
+  function reveal(){document.querySelectorAll('main > section[id^="view-"]').forEach(section=>section.hidden=section.id!=='view-bank-task');document.querySelectorAll('nav button').forEach(button=>button.toggleAttribute('aria-current',button.id==='nav-bank-task'));}
   function show(){
     install();if(busy||working)return;
-    document.querySelectorAll('main > section[id^="view-"]').forEach(section=>section.hidden=section.id!=='view-bank-task');
-    document.querySelectorAll('nav button').forEach(button=>button.toggleAttribute('aria-current',button.id==='nav-bank-task'));
+    reveal();
     window.AssistantPanel?.save();
     if(task?.id)refresh();else loadCatalog();
   }
@@ -51,7 +51,7 @@
   async function loadCatalog(){
     try{const data=await opsFetch('/api/bank/tasks/catalog');catalog=data;const select=el('bank-task-ticket'),old=select.value;
       select.innerHTML=(data.tickets||[]).map(t=>`<option value="${esc(t.id||t.ticket_id)}">${esc(t.id||t.ticket_id)} · ${esc(t.title||'接入工单')}</option>`).join('');
-      if([...select.options].some(o=>o.value===old))select.value=old;renderTicket();renderDownloads();
+      if([...select.options].some(o=>o.value===old))select.value=old;renderTicket();renderDownloads();msg('');render();
     }catch(err){msg(err.message,true);}
   }
   function renderDownloads(){const container=el('bank-task-downloads');if(!container)return;const items=(catalog?.downloads||[]).filter(d=>d&&typeof d.id==='string');container.innerHTML='<a href="/competition.html" target="_blank" rel="noopener">演示说明与项目交付 ↗</a>'+items.map(d=>`<a href="/api/bank/tasks/download?id=${esc(encodeURIComponent(d.id))}" download>${esc(d.title||d.name||d.id)} ↓</a>`).join('');}
@@ -91,8 +91,8 @@
   async function preview(){if(working||busy||!proposal?.operations?.length)return;working=true;render();try{
       const grouped=new Map();for(const op of proposal.operations)if(!grouped.has(op.entity))grouped.set(op.entity,op);
       for(const entity of ['terminal','parameter','ip']){const op=grouped.get(entity);if(op)await window.BankUI?.previewFields(op);}
-      show();await spotlight(el('bank-task-diff'),'三页预演完成 · 当前仍未保存',100,180);clearAim();msg('三页填写预演完成。请在整组差异处一次确认；页面预演没有保存业务数据。');
-    }catch(err){show();msg(err.message,true);}finally{working=false;clearAim();render();}}
+      reveal();await spotlight(el('bank-task-diff'),'三页预演完成 · 当前仍未保存',100,180);clearAim();msg('三页填写预演完成。请在整组差异处一次确认；页面预演没有保存业务数据。');
+    }catch(err){reveal();msg(err.message,true);}finally{working=false;clearAim();render();}}
   async function confirm(){if(working||busy||!pending())return;working=true;render();const id=proposal.id,digest=proposal.digest;try{await spotlight(el('bank-task-approve'),'一次确认整组 · 后台核对后执行',80,160);const data=await opsFetch('/api/execute',{proposal_id:id,digest});adopt(data);if(data.verification?.passed===false||task?.status==='verification_failed'){msg('业务配置已保存并读回，但模拟验收未通过。请查看差异或准备恢复。',true);}else if(data.verification?.passed===true||task?.status==='completed'){msg('整组配置已保存，独立读回与模拟验收完成。');}else msg('执行已返回，请核对后台报告与验收状态。');await spotlight(el('bank-task-report-card'),'查看后台验收报告',100,160);}catch(err){msg(err.message,true);await refresh();}finally{working=false;clearAim();render();}}
   async function cancel(){if(working||busy||!pending())return;working=true;render();try{const data=await opsFetch('/api/cancel',{proposal_id:proposal.id});proposal=null;adopt(data);msg('整组方案已取消，业务配置未保存。');}catch(err){msg(err.message,true);}finally{working=false;render();}}
   async function verify(){if(working||busy||!task?.id)return;working=true;render();try{adopt(await opsFetch('/api/bank/tasks/verify',{task_id:task.id}));msg('后台模拟验收已重新运行。');}catch(err){msg(err.message,true);}finally{working=false;render();}}
