@@ -45,7 +45,7 @@ uv run python server.py
 - [公开案例与设计依据](docs/research.md)
 
 ```powershell
-cd D:/Work/web-ai-assistant-review-20261012
+cd <项目目录>
 python -m unittest discover -s tests -v
 ```
 

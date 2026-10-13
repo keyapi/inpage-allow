@@ -22,7 +22,7 @@ title: Web AI assistant — 文档索引
 | Script | 工单驱动渠道接入助手 · 演示脚本（6–8 分钟） | [docs/competition-v2-script.md](docs/competition-v2-script.md) |
 | Reference | Cursor 续办代码审计与复核清单 | [docs/cursor-audit-2026-10-12.md](docs/cursor-audit-2026-10-12.md) |
 | Reference | 五分钟演示与答疑备用剧本 | [docs/demo-script.md](docs/demo-script.md) |
-| Reference | 试用反馈与持续改进闭环 | [docs/feedback-loop.md](docs/feedback-loop.md) |
+| Reference | 试用反馈与直接读取闭环 | [docs/feedback-loop.md](docs/feedback-loop.md) |
 | Reference | 2026-10-12 实现与验证交接 | [docs/handoff-2026-10-12.md](docs/handoff-2026-10-12.md) |
 | Index | 文档索引 | [docs/index.md](docs/index.md) |
 | Log | 文档变更日志 | [docs/log.md](docs/log.md) |
