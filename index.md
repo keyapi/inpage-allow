@@ -37,6 +37,7 @@ title: Web AI assistant — 文档索引
 | Index | 经验索引 | [docs/solutions/index.md](docs/solutions/index.md) |
 | Log | 经验变更日志 | [docs/solutions/log.md](docs/solutions/log.md) |
 | Reference | 独立演示静态目录不能包含可访问的运行配置 | [docs/solutions/static-config-exposure.md](docs/solutions/static-config-exposure.md) |
+| Spec | 统一工作台 Agent 实施与验收规划 | [docs/unified-agent-plan.md](docs/unified-agent-plan.md) |
 | Index | 模拟资料说明 | [kb/index.md](kb/index.md) |
 | Reference | 历史通知演示资料（非当前竞赛规则） | [kb/notice-policy.md](kb/notice-policy.md) |
 | Log | 项目变更日志 | [log.md](log.md) |
