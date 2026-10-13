@@ -12,6 +12,7 @@ It only talks to the local demo server; no bank or external endpoint is contacte
 import argparse
 import http.cookiejar
 import json
+import os
 import time
 import urllib.error
 import urllib.request
@@ -36,7 +37,10 @@ def call(opener, base, path, body=None, timeout=180):
 def run(base, ticket, port, text, recover):
     started_at = time.time()
     opener = connect(base)
-    call(opener, base, '/api/login', {'username': 'operator', 'password': 'demo2026'})
+    password = os.environ.get('DEMO_LOGIN_PASSWORD')
+    if not password:
+        raise SystemExit('Set DEMO_LOGIN_PASSWORD for the local demo login before running this script.')
+    call(opener, base, '/api/login', {'username': 'operator', 'password': password})
     _, created = call(opener, base, '/api/bank/tasks/start', {'ticket_id': ticket})
     task = created['task']
     steps, chat = [], None
