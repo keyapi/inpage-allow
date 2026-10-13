@@ -26,3 +26,5 @@ title: 文档索引
 | 调研来源 | [research.md](research.md) |
 | 早期探索（部分已替代） | [read-then-guard.md](read-then-guard.md) |
 | 变更 | [log.md](log.md) |
+
+- [路由场景评估与两分钟演示](route-scenario.md)

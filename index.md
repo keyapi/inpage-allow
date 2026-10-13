@@ -27,6 +27,7 @@ title: Web AI assistant — 文档索引
 | Log | 文档变更日志 | [docs/log.md](docs/log.md) |
 | Reference | 网页内参数助手先查再决定，护栏看动作不看原话 | [docs/read-then-guard.md](docs/read-then-guard.md) |
 | Research | 竞赛设计依据与公开案例 | [docs/research.md](docs/research.md) |
+| Guide | 路由配置场景评估与演示 | [docs/route-scenario.md](docs/route-scenario.md) |
 | Reference | 安全边界与质疑解答 | [docs/security-boundaries.md](docs/security-boundaries.md) |
 | Index | 经验索引 | [docs/solutions/index.md](docs/solutions/index.md) |
 | Log | 经验变更日志 | [docs/solutions/log.md](docs/solutions/log.md) |

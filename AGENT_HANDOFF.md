@@ -30,3 +30,7 @@ title: 受控办理助手交接
 - 演示登录不是 BOC SSO，SQLite 日志不是防篡改监管审计。
 
 环境见 [.env.example](.env.example)。禁止提交 Key、数据库、截图和运行数据。用户拒绝本次轮换 Key，不能宣称历史暴露风险消失。Git 走分支和 PR。根索引用 `uv run python scripts/update_index.py` 自动同步，不跨仓库修改。
+
+## 路由副线（2026-10-13）
+
+见 docs/route-scenario.md；route_demo.py / route_ui.js；接口 /api/routes/{state,plan,execute,cancel}。独立于原三页工单，模型仅选业务，后台生成受控差异。最终测试和部署记录需查看该文档。
