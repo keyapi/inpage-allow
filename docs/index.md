@@ -16,6 +16,11 @@ title: 文档索引
 | 实施与验收 | [competition-plan.md](competition-plan.md) |
 | 工单驱动升级设计合同 | [competition-v2-design.md](competition-v2-design.md) |
 | 续接实施计划（当前接力点） | [competition-v2-implementation-plan.md](competition-v2-implementation-plan.md) |
+| 竞赛交付：项目说明 | [competition-v2-project.md](competition-v2-project.md) |
+| 竞赛交付：演示脚本 | [competition-v2-script.md](competition-v2-script.md) |
+| 竞赛交付：答疑 | [competition-v2-faq.md](competition-v2-faq.md) |
+| 竞赛交付：演示材料 | [competition-v2-materials.md](competition-v2-materials.md) |
+| 竞赛交付：实际测试结果 | [competition-v2-results.md](competition-v2-results.md) |
 | 五分钟与答疑 | [demo-script.md](demo-script.md) |
 | 安全范围和剩余风险 | [security-boundaries.md](security-boundaries.md) |
 | 调研来源 | [research.md](research.md) |

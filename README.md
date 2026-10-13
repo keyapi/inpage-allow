@@ -32,14 +32,24 @@ uv run python server.py
 
 ## 演示与验证
 
+工单驱动的渠道接入主线（当前主场景）演示与交付：
+
+- [项目说明](docs/competition-v2-project.md) / [演示脚本](docs/competition-v2-script.md) / [答疑](docs/competition-v2-faq.md) / [演示材料](docs/competition-v2-materials.md) / [实际测试结果](docs/competition-v2-results.md)
+- [设计合同](docs/competition-v2-design.md) / [续接实施计划](docs/competition-v2-implementation-plan.md)
+
+旧场景（柜面限额/联调）材料：
+
 - [5 分钟主剧本与答疑场景](docs/demo-script.md)
 - [实施规格与验收目标](docs/competition-plan.md)
 - [安全边界与质疑解答](docs/security-boundaries.md)
 - [公开案例与设计依据](docs/research.md)
 
 ```powershell
-uv run python -m unittest discover -s tests -v
+cd D:/Work/web-ai-assistant-review-20261012
+python -m unittest discover -s tests -v
 ```
+
+> 本仓库无 `pyproject.toml` / `uv.lock`，请用系统 `python` 在本目录直接运行；在仓库外跑 `uv run python` 会解析到别的项目。
 
 测试结果以本次命令输出为准。安全测试是明确标注的确定性测试，不把它冒充真实模型遭受攻击。真实模型对话单独演练；备用录像与回放也须标注。
 
