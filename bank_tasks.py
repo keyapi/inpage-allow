@@ -334,11 +334,18 @@ class BankTasks:
                 if not isinstance(values, dict) or not isinstance(refs, dict):
                     self._error('INVALID_PLAN', '操作缺少值或来源')
                 if action == 'create':
-                    if values != {'name': 'idempotency_enabled', 'value': 'true'}:
+                    # The model may describe the full new record; the backend owns the definition.
+                    if values.get('name') != 'idempotency_enabled' or values.get('value') != 'true':
                         self._error('INVALID_PLAN', '幂等参数只能使用固定模拟定义', 409)
-                elif values != target_values:
-                    self._error('INVALID_EVIDENCE', '操作值与工单现行规则不一致', 409)
-                if set(refs) != set(target_values):
+                    target_keys = {'value'}
+                else:
+                    # Compare only the fields the task actually changes; the stored record is
+                    # rebuilt from the backend-computed target, so extra keys can be ignored.
+                    if not set(target_values) <= set(values) or \
+                            any(values[key] != value for key, value in target_values.items()):
+                        self._error('INVALID_EVIDENCE', '操作值与工单现行规则不一致', 409)
+                    target_keys = set(target_values)
+                if not target_keys <= set(refs):
                     self._error('INVALID_EVIDENCE', '每个变更字段都须有相应来源', 409)
                 record = next((r for r in bank[COLLECTIONS[entity]] if r['id'] == rid), None)
                 if action == 'create':

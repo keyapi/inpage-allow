@@ -207,5 +207,34 @@ class BankTaskTests(unittest.TestCase):
         self.assertEqual(BankOperations(self.store).snapshot('one', 'operator')['version'], version)
 
 
+    def test_extra_value_keys_are_tolerated_but_wrong_values_are_not(self):
+        task = self.begin()
+        ops = self.plan(task)
+        ops[1]['values'].update({'name': 'timeout_seconds', 'value_type': 'number'})
+        ops[2]['values'].update({'name': 'retry_count', 'value_type': 'number'})
+        ops[3]['values'].update({'terminal_id': 'TERM-DEMO-001', 'value_type': 'boolean', 'note': '备注'})
+        proposal = self.tasks.prepare('one', 'operator', task['id'], ops, '多余字段应被忽略')
+        self.assertEqual(len(proposal['operations']), 5)
+        changed = next(op for op in proposal['operations'] if op['record_id'] == 'PARAM-DEMO-001')
+        self.assertEqual(changed['values'], {'value': '60'})
+        created = next(op for op in proposal['operations'] if op['action'] == 'create')
+        self.assertEqual(created['after']['value_type'], 'text')
+
+    def test_wrong_create_definition_is_rejected(self):
+        task = self.begin()
+        ops = self.plan(task)
+        ops[3]['values'] = {'name': 'idempotency_enabled', 'value': 'false'}
+        self.code('INVALID_PLAN', lambda: self.tasks.prepare('one', 'operator', task['id'], ops, '错值'))
+
+    def test_already_compliant_ticket_reports_no_change(self):
+        task = self.begin()
+        p = self.tasks.prepare('one', 'operator', task['id'], self.plan(task), '办理')
+        self.tasks.execute('one', 'operator', p['id'], p['digest'])
+        again = self.begin()
+        self.code('NO_CHANGE', lambda: self.tasks.prepare('one', 'operator', again['id'], self.plan(again), '再办一次'))
+        bank = BankOperations(self.store).snapshot('one', 'operator')
+        self.assertEqual(len([x for x in bank['parameters'] if x['name'] == 'idempotency_enabled']), 1)
+
+
 if __name__ == '__main__':
     unittest.main()
