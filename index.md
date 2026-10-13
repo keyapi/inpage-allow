@@ -31,6 +31,9 @@ title: Web AI assistant — 文档索引
 | Research | 竞赛设计依据与公开案例 | [docs/research.md](docs/research.md) |
 | Guide | 路由配置场景评估与演示 | [docs/route-scenario.md](docs/route-scenario.md) |
 | Reference | 安全边界与质疑解答 | [docs/security-boundaries.md](docs/security-boundaries.md) |
+| Reference | 网页内参数助手先查再决定，护栏看动作不看原话 | [docs/solutions/architecture-patterns/branch-param-desk-read-then-guard.md](docs/solutions/architecture-patterns/branch-param-desk-read-then-guard.md) |
+| Index | 状态与权限设计经验 | [docs/solutions/architecture-patterns/index.md](docs/solutions/architecture-patterns/index.md) |
+| Log | 设计经验变更 | [docs/solutions/architecture-patterns/log.md](docs/solutions/architecture-patterns/log.md) |
 | Index | 经验索引 | [docs/solutions/index.md](docs/solutions/index.md) |
 | Log | 经验变更日志 | [docs/solutions/log.md](docs/solutions/log.md) |
 | Reference | 独立演示静态目录不能包含可访问的运行配置 | [docs/solutions/static-config-exposure.md](docs/solutions/static-config-exposure.md) |
