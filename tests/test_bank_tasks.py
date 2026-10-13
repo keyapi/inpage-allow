@@ -152,6 +152,60 @@ class BankTaskTests(unittest.TestCase):
         self.code('INVALID_ANSWER',
                   lambda: self.tasks.answer('one', 'operator', task['id'], 'client_port', '9443'))
 
+    def test_verification_report_is_per_check_and_simulated(self):
+        task = self.begin()
+        p = self.tasks.prepare('one', 'operator', task['id'], self.plan(task), '办理')
+        report = self.tasks.execute('one', 'operator', p['id'], p['digest'])['report']
+        self.assertTrue(report['simulation'])
+        self.assertEqual(report['source'], 'local_contract_simulator')
+        self.assertEqual(report['fixture_version'], '1.0')
+        self.assertTrue(report['passed'])
+        names = [c['name'] for c in report['checks']]
+        for expected in ('整组逐记录独立读回', '三页终端·参数·IP 一致性', '地址与回调契约（模拟）',
+                         '幂等重复请求（模拟账本）', '超时与重试（虚拟耗时）', '范围未扩大'):
+            self.assertIn(expected, names)
+        readback = next(c for c in report['checks'] if c['name'] == '整组逐记录独立读回')
+        self.assertIn('IP-DEMO-001', readback['detail'])
+        self.assertIn('IP-DEMO-002', report['checks'][-1]['detail'])
+        self.assertEqual(report['execution']['version_before'], 1)
+        self.assertEqual(report['execution']['version_after'], 2)
+
+    def test_rejected_receiver_reports_each_check_not_one_blob(self):
+        task = self.begin('WO-DEMO-003')
+        p = self.tasks.prepare('one', 'operator', task['id'], self.plan(task), '失败夹具')
+        report = self.tasks.execute('one', 'operator', p['id'], p['digest'])['report']
+        self.assertFalse(report['passed'])
+        self.assertEqual([c['name'] for c in report['checks'] if not c['passed']],
+                         ['地址与回调契约（模拟）'])
+        self.assertEqual(len([c for c in report['checks'] if c['passed']]), 5)
+
+    def test_readback_stale_when_bank_advances_after_commit(self):
+        task = self.begin()
+        p = self.tasks.prepare('one', 'operator', task['id'], self.plan(task), '办理')
+        self.tasks.execute('one', 'operator', p['id'], p['digest'])
+        follow = BankOperations(self.store).propose('one', 'operator', 'ip', 'update',
+                                                    'IP-DEMO-002', {'client_port': 8081}, '他人后续修改')
+        BankOperations(self.store).execute('one', 'operator', follow['id'], follow['digest'])
+        self.code('READBACK_STALE', lambda: self.tasks.verify('one', 'operator', task['id']))
+
+    def test_recovery_is_idempotent(self):
+        task = self.begin('WO-DEMO-003')
+        p = self.tasks.prepare('one', 'operator', task['id'], self.plan(task), '失败夹具')
+        self.tasks.execute('one', 'operator', p['id'], p['digest'])
+        recovery = self.tasks.recover('one', 'operator', task['id'])
+        first = self.tasks.execute('one', 'operator', recovery['id'], recovery['digest'])
+        self.assertEqual(first['task']['status'], 'recovered')
+        version = BankOperations(self.store).snapshot('one', 'operator')['version']
+        # Executing the same recovery proposal again is a no-op.
+        again = self.tasks.execute('one', 'operator', recovery['id'], recovery['digest'])
+        self.assertEqual(again['code'], 'ALREADY_EXECUTED')
+        self.assertEqual(BankOperations(self.store).snapshot('one', 'operator')['version'], version)
+        # Asking to recover again returns the existing result, not a new proposal.
+        repeat = self.tasks.recover('one', 'operator', task['id'])
+        self.assertEqual(repeat['id'], recovery['id'])
+        self.assertEqual(repeat['status'], 'executed')
+        self.assertEqual(BankOperations(self.store).snapshot('one', 'operator')['version'], version)
+
 
 if __name__ == '__main__':
     unittest.main()

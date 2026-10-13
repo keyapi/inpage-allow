@@ -49,8 +49,10 @@ class DomainError(Exception):
 
 
 def digest(proposal):
-    immutable = {k: v for k, v in proposal.items() if k not in {'digest', 'status', 'executed_version', 'ticket_id'}
-                 and not k.startswith('_')}
+    # Explicit allowlist of fields that legitimately change after approval:
+    # execution bookkeeping and display-only metadata. Any other field is bound.
+    excluded = {'digest', 'status', 'executed_version', 'ticket_id', '_execution', '_expected_hash'}
+    immutable = {k: v for k, v in proposal.items() if k not in excluded}
     return hashlib.sha256(json.dumps(immutable, sort_keys=True, ensure_ascii=False,
                                      separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 

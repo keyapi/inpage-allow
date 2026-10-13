@@ -55,6 +55,8 @@ TICKETS = {
 }
 PROFILES = {'standard': (12, 60, 1), 'conservative': (4, 45, 0)}
 MAX_OPERATIONS = 12
+FIXTURE_VERSION = '1.0'
+CHECK_READBACK = '整组逐记录独立读回'
 
 
 def _hash(value):
@@ -459,8 +461,11 @@ class BankTasks:
             bank['version'] += 1
             p['status'], p['executed_version'] = 'executed', bank['version']
             p['_expected_hash'] = _hash(bank)
-            p['_execution'] = {'committed': True, 'version': bank['version'],
-                               'operation_count': len(p['operations']), 'kind': p['kind']}
+            p['_execution'] = {'id': 'exec-' + uuid.uuid4().hex, 'status': 'committed',
+                               'committed': True, 'kind': p['kind'],
+                               'operation_count': len(p['operations']),
+                               'version': bank['version'], 'version_before': p['version'],
+                               'version_after': bank['version'], 'committed_at': time.time()}
             task['status'] = 'verification_pending'
             task['active_proposal_id'] = None
             task['bank_version'] = bank['version']
@@ -485,6 +490,119 @@ class BankTasks:
                 checked['report']['verification'] if checked.get('report') else {'passed': False, 'pending': True},
                 'report': checked.get('report'), 'task': checked['task']}
 
+    @staticmethod
+    def _fixture(ticket):
+        return {'callback_receiver': ticket['callback_receiver'],
+                'virtual_elapsed_seconds': 50 if ticket['profile'] == 'standard' else 40,
+                'receiver_port': 9443 if ticket['profile'] == 'standard' else 8443}
+
+    @staticmethod
+    def _first_failure(checks):
+        failed = [c for c in checks if not c['passed']]
+        if not failed:
+            return '全部通过'
+        return '；'.join(c['name'] + '：' + c.get('detail', '') for c in failed)[:300]
+
+    def _simulate(self, bank, proposal, task, ticket):
+        """Deterministic local contract simulation. No network, no model verdicts."""
+        checks = []
+        ids, mismatched, readback_ok = [], [], True
+        for op in proposal['operations']:
+            found = next((r for r in bank[COLLECTIONS[op['entity']]] if r['id'] == op['record_id']), None)
+            ids.append(op['record_id'])
+            good = found is None if op['action'] == 'delete' else (found is not None and redact_all(found) == op['after'])
+            if not good:
+                readback_ok = False
+                mismatched.append(op['record_id'])
+        checks.append({'name': CHECK_READBACK, 'passed': readback_ok,
+                       'detail': ('逐记录一致：' + '、'.join(ids)) if readback_ok else ('不一致：' + '、'.join(mismatched))})
+        baseline = task.get('before_bank')
+        same_as_before = baseline is None or all(
+            sorted(bank[key], key=lambda r: r['id']) == sorted(baseline[key], key=lambda r: r['id'])
+            for key in COLLECTIONS.values())
+        if proposal['kind'] == 'recover':
+            checks.append({'name': '恢复后与执行前像一致', 'passed': same_as_before,
+                           'detail': '已回到办理前配置' if same_as_before else '恢复值与执行前像不一致'})
+            secret = next((p for p in bank['parameters'] if p['name'] == 'api_secret'), None)
+            checks.append({'name': '范围未扩大', 'passed': same_as_before and (secret is None or secret['value'] == 'DEMO_SECRET'),
+                           'detail': '敏感占位保持=%s' % (secret['value'] if secret else '—')})
+            return checks
+
+        terminal = next((t for t in bank['terminals'] if t['terminal_code'] == ticket['terminal_code']), None)
+        parameters = {p['name']: p for p in bank['parameters'] if terminal and p['terminal_id'] == terminal['id']}
+        ips = [p for p in bank['ip_configs'] if terminal and p['terminal_id'] == terminal['id']]
+        port = task['answers'].get('client_port', ticket['client_port'])
+        concurrency, timeout, retries = PROFILES[ticket['profile']]
+
+        unique = sum(1 for t in bank['terminals'] if t['terminal_code'] == ticket['terminal_code']) == 1
+        linked = all(p['terminal_id'] in {t['id'] for t in bank['terminals']} for p in bank['parameters'])
+        tenant = terminal is not None and terminal['tenant_code'] == 'DEMO-BANK' and bool(ips) and \
+            all(i['tenant_id'] == 'TENANT-DEMO-01' for i in ips)
+        values_ok = bool(terminal) and terminal['max_concurrency'] == concurrency and terminal['callback_mode'] == 'ASYNC' and \
+            parameters.get('timeout_seconds', {}).get('value') == str(timeout) and \
+            parameters.get('retry_count', {}).get('value') == str(retries) and \
+            parameters.get('idempotency_enabled', {}).get('value') == 'true'
+        checks.append({'name': '三页终端·参数·IP 一致性', 'passed': unique and linked and tenant and values_ok,
+                       'detail': '终端唯一=%s 参数关联=%s 租户一致=%s 档位值=%s' % (unique, linked, tenant, values_ok)})
+
+        front = next((i for i in ips if i['front_address'] == '192.0.2.10' and i['front_port'] == 8443 and
+                      i['client_address'] == '198.51.100.10'), None)
+        contract = bool(terminal) and terminal['protocol'] == 'HTTPS' and terminal['sign_method'] == 'HMAC-SHA256' and \
+            terminal['encoding'] == 'UTF-8' and terminal['callback_mode'] == 'ASYNC' and \
+            terminal['endpoint'] == 'https://192.0.2.10:8443/demo' and bool(front) and front['client_port'] == port
+        receiver = ticket['callback_receiver']
+        checks.append({'name': '地址与回调契约（模拟）', 'passed': contract and receiver == 'accept',
+                       'detail': 'HTTPS/HMAC/异步/地址端口=%s 接收方=%s' % (contract, receiver)})
+
+        idem = parameters.get('idempotency_enabled', {}).get('value') == 'true'
+        ledger = {}
+
+        def deliver(request_id):
+            if idem and request_id in ledger:
+                ledger[request_id] += 1
+                return 'duplicate_ignored'
+            ledger[request_id] = 0
+            return 'accepted'
+
+        first, second = deliver('req-1'), deliver('req-1')
+        checks.append({'name': '幂等重复请求（模拟账本）',
+                       'passed': first == 'accepted' and second == 'duplicate_ignored' and len(ledger) == 1,
+                       'detail': 'first=%s second=%s side_effect_count=%d' % (first, second, len(ledger))})
+
+        try:
+            budget_timeout = int(parameters.get('timeout_seconds', {}).get('value') or 0)
+            budget_retry = int(parameters.get('retry_count', {}).get('value') or 0)
+        except ValueError:
+            budget_timeout, budget_retry = 0, 0
+        remaining, attempt = (50 if ticket['profile'] == 'standard' else 40), 0
+        while True:
+            attempt += 1
+            if remaining <= budget_timeout:
+                break
+            if attempt > budget_retry:
+                break
+            remaining -= budget_timeout
+        completed = remaining <= budget_timeout
+        checks.append({'name': '超时与重试（虚拟耗时）', 'passed': completed,
+                       'detail': 'attempts=%d 预算=%ds/%d次 虚拟耗时完成=%s' % (attempt, budget_timeout, budget_retry, completed)})
+
+        touched = {(op['entity'], op['record_id']) for op in proposal['operations']}
+        scope_ok = True
+        for entity, key in COLLECTIONS.items():
+            before_by_id = {r['id']: r for r in (baseline or {}).get(key, [])}
+            for record in bank[key]:
+                if (entity, record['id']) not in touched and before_by_id.get(record['id']) != record:
+                    scope_ok = False
+        secret = next((p for p in bank['parameters'] if p['name'] == 'api_secret'), None)
+        backup = next((i for i in bank['ip_configs'] if i['id'] == 'IP-DEMO-002'), None)
+        backup_ok = backup is not None and backup['front_address'] == '192.0.2.11' and backup['client_address'] == '203.0.113.10'
+        checks.append({'name': '范围未扩大',
+                       'passed': scope_ok and backup_ok and (secret is None or secret['value'] == 'DEMO_SECRET'),
+                       'detail': '未触及记录不变=%s 备用链路(%s)不变=%s 敏感占位=%s'
+                                 % (scope_ok, backup['id'] if backup else '—', backup_ok,
+                                    secret['value'] if secret else '—')})
+        return checks
+
     def verify(self, workspace, role, task_id):
         self.store._role(role, 'operator')
         current = self.state(workspace, role, task_id)
@@ -507,26 +625,28 @@ class BankTasks:
                 self._error('INVALID_STATE', '没有已执行整组提案', 409)
             p = proposals[-1]
             if bank['version'] != p['executed_version']:
-                self._error('STALE', '读回期间配置又变化', 409)
-            readback = _hash(bank) == p['_expected_hash']
+                self._error('READBACK_STALE', '已提交但读回版本已被其他操作推进，请重新读取', 409)
             ticket = TICKETS[internal['ticket_id']]
+            checks = self._simulate(bank, p, internal, ticket)
+            readback = next(c['passed'] for c in checks if c['name'] == CHECK_READBACK)
+            business = all(c['passed'] for c in checks)
             if p['kind'] == 'recover':
-                business = readback and bank == internal['before_bank'] | {'version': bank['version']}
-                expected, actual = '恢复任务前配置', '已恢复' if business else '恢复值不一致'
                 status = 'recovered' if business else 'verification_failed'
+                expected, actual = '恢复任务前配置', '已恢复' if business else self._first_failure(checks)
             else:
-                business = readback and ticket['callback_receiver'] == 'accept'
-                expected, actual = '模拟回调接收成功', ('模拟回调接收成功' if business else
-                                  'callback_receiver=reject' if readback else '读回不一致')
                 status = 'completed' if business else 'verification_failed'
+                expected, actual = '模拟契约全部通过', self._first_failure(checks)
             verification = {'passed': readback, 'source': 'sqlite_independent_readback',
                             'version': bank['version'], 'operation_count': len(p['operations'])}
             report = {'id': 'report-' + uuid.uuid4().hex, 'task_id': task_id, 'proposal_id': p['id'],
                       'ticket_id': internal['ticket_id'], 'kind': p['kind'], 'status': status,
-                      'verification': verification, 'business_passed': bool(business),
-                      'expected': expected, 'actual': actual,
-                      'checks': [{'name': '整组三页持久化读回与未触及范围', 'passed': readback},
-                                 {'name': '模拟业务回调契约', 'passed': bool(business)}],
+                      'simulation': True, 'source': 'local_contract_simulator', 'fixture_version': FIXTURE_VERSION,
+                      'bank_version': bank['version'], 'fixture': self._fixture(ticket),
+                      'verification': verification, 'execution': copy.deepcopy(p.get('_execution') or {}),
+                      'passed': bool(business), 'business_passed': bool(business),
+                      'expected': expected, 'actual': actual, 'checks': checks,
+                      'summary': '本地模拟契约测试通过' if business
+                                 else '本地模拟契约测试未通过：' + self._first_failure(checks),
                       'created_at': time.time()}
             internal['status'] = status
             internal['last_report_id'] = report['id']
@@ -539,6 +659,12 @@ class BankTasks:
         def prepare_recovery(state):
             self.store._role(role, 'operator')
             task = self._task(state, task_id)
+            if task['status'] == 'recovered':
+                # Repeat recovery returns the existing result instead of writing again.
+                existing = next((p for p in state['proposals'] if p.get('task_id') == task_id and
+                                 p.get('kind') == 'recover' and p['status'] == 'executed'), None)
+                if existing is not None:
+                    return self._public_proposal(existing)
             if task['status'] != 'verification_failed' or task.get('before_bank') is None:
                 self._error('INVALID_STATE', '仅验收失败的已执行任务可准备恢复', 409)
             bank = self._bank(state)
