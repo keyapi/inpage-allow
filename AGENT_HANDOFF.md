@@ -48,3 +48,5 @@ feedback_store.py / feedback_ui.js；/api/feedback POST提交、GET凭私有回�
 相关经验：[实时状态、培训与反馈隔离](docs/solutions/architecture-patterns/branch-param-desk-read-then-guard.md)。
 
 回复排版经验：[可读回复与表格渲染](docs/solutions/developer-experience/ops-assistant-model-reply-formatting.md)。
+
+2026-10-14：能力介绍限制为三类短概览；统一侧栏“允许修改（测试）/取消”，柜面填写后收起弹窗，路由/工单整组方案复用侧栏确认。保留页面人工入口及鼠标、高亮、逐字动画；132项回归通过，真实模型浏览器验证能力概览、20万确认独立读回、25万取消不写、余额路由侧栏确认验收。
