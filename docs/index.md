@@ -14,6 +14,8 @@ title: 文档索引
 | Cursor续办审计与待验收 | [cursor-audit-2026-10-12.md](cursor-audit-2026-10-12.md) |
 | 当前状态、对话批准与Harness交接 | [handoff-2026-10-12.md](handoff-2026-10-12.md) |
 | 实施与验收 | [competition-plan.md](competition-plan.md) |
+| 工单驱动升级设计合同 | [competition-v2-design.md](competition-v2-design.md) |
+| 续接实施计划（当前接力点） | [competition-v2-implementation-plan.md](competition-v2-implementation-plan.md) |
 | 五分钟与答疑 | [demo-script.md](demo-script.md) |
 | 安全范围和剩余风险 | [security-boundaries.md](security-boundaries.md) |
 | 调研来源 | [research.md](research.md) |

@@ -13,6 +13,8 @@ title: Web AI assistant — 文档索引
 | Reference | 助手面板、刷新记忆与删除语义修复 | [docs/assistant-panel.md](docs/assistant-panel.md) |
 | Reference | 渠道接入三页面实现与实际验收 | [docs/bank-operations.md](docs/bank-operations.md) |
 | Spec | 竞赛实施与验收规格 | [docs/competition-plan.md](docs/competition-plan.md) |
+| Spec | 工单驱动的渠道接入办理助手 · 竞赛升级设计 | [docs/competition-v2-design.md](docs/competition-v2-design.md) |
+| Plan | 工单驱动渠道接入助手 · 续接实施计划 | [docs/competition-v2-implementation-plan.md](docs/competition-v2-implementation-plan.md) |
 | Reference | Cursor 续办代码审计与复核清单 | [docs/cursor-audit-2026-10-12.md](docs/cursor-audit-2026-10-12.md) |
 | Reference | 五分钟演示与答疑备用剧本 | [docs/demo-script.md](docs/demo-script.md) |
 | Reference | 2026-10-12 实现与验证交接 | [docs/handoff-2026-10-12.md](docs/handoff-2026-10-12.md) |
