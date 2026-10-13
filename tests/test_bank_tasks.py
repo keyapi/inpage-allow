@@ -130,6 +130,28 @@ class BankTaskTests(unittest.TestCase):
         self.assertEqual(bank['terminals'][0]['max_concurrency'], 8)
         self.assertFalse(any(p['name'] == 'idempotency_enabled' for p in bank['parameters']))
 
+    def test_catalog_exposes_ticket_text_for_the_ui(self):
+        catalog = self.tasks.catalog('one', 'operator')
+        self.assertTrue(catalog['tickets'])
+        self.assertTrue(all(t.get('text') for t in catalog['tickets']))
+        self.assertTrue(all(d['id'].startswith('ticket-') for d in catalog['downloads']))
+
+    def test_answer_clears_the_question_and_reask_returns_known_value(self):
+        task = self.begin()
+        self.assertEqual([q['id'] for q in task['questions']], ['client_port'])
+        self.tasks.answer('one', 'operator', task['id'], 'client_port', 9443)
+        state = self.tasks.state('one', 'operator', task['id'])['task']
+        self.assertEqual(state['questions'], [])
+        self.assertEqual(state['answered_questions'][0]['value'], 9443)
+        asked = self.tasks.ask('one', 'operator', task['id'], 'client_port', '端口是多少？')
+        self.assertIsNone(asked['question'])
+        self.assertEqual(asked['known']['client_port'], 9443)
+
+    def test_answer_rejects_string_port(self):
+        task = self.begin()
+        self.code('INVALID_ANSWER',
+                  lambda: self.tasks.answer('one', 'operator', task['id'], 'client_port', '9443'))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -136,7 +136,7 @@ class BankTasks:
 
     def catalog(self, workspace, role):
         self.store._role(role)
-        return {'tickets': [{k: t[k] for k in ('id', 'version', 'title', 'status', 'environment', 'hash')}
+        return {'tickets': [{k: t[k] for k in ('id', 'version', 'title', 'status', 'environment', 'hash', 'text')}
                             for t in TICKETS.values()],
                 'documents': [{k: d[k] for k in ('id', 'version', 'title', 'status', 'environment')}
                               for d in DOCUMENTS],
@@ -213,8 +213,12 @@ class BankTasks:
                 self._error('INVALID_STATE', '任务当前不可追问', 409)
             if field != 'client_port' or TICKETS[task['ticket_id']]['client_port'] is not None:
                 self._error('INVALID_QUESTION', '工单没有这一项缺失信息')
-            question = task['questions'][0]
-            return {'question': copy.deepcopy(question), 'task': self._public_task(task)}
+            pending = next((q for q in task['questions'] if q['field'] == field), None)
+            if pending is None:
+                # Already answered in this task: hand back the known value instead of re-asking.
+                return {'question': None, 'known': {field: task['answers'].get(field)},
+                        'task': self._public_task(task)}
+            return {'question': copy.deepcopy(pending), 'task': self._public_task(task)}
         return self.store._transaction(workspace, role, 'bank_task_ask', ask_in_state)
 
     def answer(self, workspace, role, task_id, question_id, value):
@@ -223,16 +227,22 @@ class BankTasks:
             task = self._task(state, task_id)
             if task['status'] in ('invalidated', 'completed', 'recovered'):
                 self._error('INVALID_STATE', '任务当前不能回答缺项', 409)
-            if question_id != 'client_port' or not any(q['id'] == question_id for q in task['questions']):
+            if question_id != 'client_port':
                 self._error('INVALID_QUESTION', '此任务没有当前待答问题')
             if type(value) is not int or not 1 <= value <= 65535:
                 self._error('INVALID_ANSWER', '客户端端口必须为1–65535的整数')
-            if task['answers'].get(question_id) == value:
-                return {'task': self._public_task(task), 'evidence': copy.deepcopy(task['evidence'])}
-            pending = self._active_proposal(state, task)
-            if pending and pending['status'] == 'pending':
-                pending['status'] = 'cancelled'
+            pending = next((q for q in task['questions'] if q['id'] == question_id), None)
+            if pending is None:
+                if task['answers'].get(question_id) == value:
+                    return {'task': self._public_task(task), 'evidence': copy.deepcopy(task['evidence'])}
+                self._error('INVALID_QUESTION', '此任务没有当前待答问题')
+            active = self._active_proposal(state, task)
+            if active and active['status'] == 'pending':
+                active['status'] = 'cancelled'
             task['answers'][question_id] = value
+            task['questions'] = [q for q in task['questions'] if q['id'] != question_id]
+            task.setdefault('answered_questions', []).append(
+                {'id': question_id, 'field': 'client_port', 'value': value, 'answered': True})
             task['revision'] += 1
             task['active_proposal_id'] = None
             task['status'] = 'draft'
