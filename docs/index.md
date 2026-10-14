@@ -35,3 +35,4 @@ title: 文档索引
 - [演示者培训与上场准备](presenter-rehearsal.md)
 
 - [评审演示与工作台体验收口实施计划](judging-experience-plan.md)
+- [知识辅助与受控办理组合演示接力计划](combined-demo-plan.md)
