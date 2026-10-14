@@ -25,6 +25,7 @@ title: Web AI assistant — 文档索引
 | Reference | 试用反馈与直接读取闭环 | [docs/feedback-loop.md](docs/feedback-loop.md) |
 | Reference | 2026-10-12 实现与验证交接 | [docs/handoff-2026-10-12.md](docs/handoff-2026-10-12.md) |
 | Index | 文档索引 | [docs/index.md](docs/index.md) |
+| Spec | 评审演示与工作台体验收口实施计划 | [docs/judging-experience-plan.md](docs/judging-experience-plan.md) |
 | Log | 文档变更日志 | [docs/log.md](docs/log.md) |
 | Reference | 演示者培训、环节反馈与上场准备 | [docs/presenter-rehearsal.md](docs/presenter-rehearsal.md) |
 | Reference | 网页内参数助手先查再决定，护栏看动作不看原话 | [docs/read-then-guard.md](docs/read-then-guard.md) |
